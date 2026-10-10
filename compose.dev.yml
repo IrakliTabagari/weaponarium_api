@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: weaponarium
+      POSTGRES_PASSWORD: local-only-password
+      POSTGRES_DB: weaponarium
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - weaponarium_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weaponarium -d weaponarium"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+volumes:
+  weaponarium_pgdata:
