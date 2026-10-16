@@ -3,6 +3,7 @@ use anyhow::{Context, Result};
 use std::{env, net::SocketAddr};
 use serde::Serialize;
 use sqlx::{ PgPool, FromRow};
+use crate::catalog;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,7 +29,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/api/v1/categories", get(get_categories))
+        .route("/api/v1/categories", get(catalog::categories::get_categories))
         .with_state(pool);
 
     axum::serve(listener, app).await.unwrap();
@@ -44,25 +45,5 @@ async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "OK" })
 }
 
-#[derive(Serialize, FromRow)]
-struct Category {
-    id: i32,
-    name: String,
-    parent_id: Option<i32>,
-}
 
-async fn get_categories(
-    State(pool): State<PgPool>,
-) -> Result<Json<Vec<Category>>, StatusCode> {
-    let categories = sqlx::query_as::<_, Category>(
-        "SELECT id, name, parent_id FROM categories ORDER BY id",
-    )
-        .fetch_all(&pool)
-        .await
-        .map_err(|error| {
-            eprintln!("Failed to fetch categories: {error}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
 
-    Ok(Json(categories))
-}
