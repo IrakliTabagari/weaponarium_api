@@ -1,7 +1,7 @@
-﻿use axum::{extract::State, http::StatusCode, routing::get, Json, Router,};
+﻿use axum::{routing::get, Json, Router,};
 use anyhow::{Context, Result};
 use std::{env, net::SocketAddr};
-use axum::routing::post;
+use axum::routing::{post, put};
 use serde::Serialize;
 
 mod catalog;
@@ -32,8 +32,9 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .route("/api/v1/categories", get(catalog::categories::get_categories))
         .route("/api/v1/categories", post(catalog::categories::create_category))
+        .route("/api/v1/categories/{id}", put(catalog::categories::update_category))
         .route("/api/v1/weapons", get(catalog::weapons::get_weapons))
-        .route("/api/v1/categories", post(catalog::weapons::create_weapon))
+        .route("/api/v1/weapons", post(catalog::weapons::create_weapon))
         .with_state(pool);
 
     axum::serve(listener, app).await.unwrap();

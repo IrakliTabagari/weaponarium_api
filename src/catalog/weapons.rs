@@ -28,14 +28,14 @@ pub async fn get_weapons(
 }
 
 #[derive(Deserialize)]
-pub struct create_weapon_request {
+pub struct CreateWeaponRequest {
     name: String,
     category_id: i32
 }
 
 pub async fn create_weapon(
     State(pool): State<PgPool>,
-    Json(payload): Json<create_weapon_request>,
+    Json(payload): Json<CreateWeaponRequest>,
 ) -> Result<Json<Weapon>, StatusCode> {
     let category_id: Option<i32> = sqlx::query_scalar(
         "SELECT id FROM categories WHERE id = $1"
