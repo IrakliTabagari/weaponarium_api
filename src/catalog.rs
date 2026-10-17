@@ -1,2 +1,2 @@
 ﻿pub mod categories;
-mod weapons;
+pub mod weapons;

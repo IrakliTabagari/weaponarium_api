@@ -33,6 +33,7 @@ async fn main() -> Result<()> {
         .route("/api/v1/categories", get(catalog::categories::get_categories))
         .route("/api/v1/categories", post(catalog::categories::create_category))
         .route("/api/v1/weapons", get(catalog::weapons::get_weapons))
+        .route("/api/v1/categories", post(catalog::weapons::create_weapon))
         .with_state(pool);
 
     axum::serve(listener, app).await.unwrap();
