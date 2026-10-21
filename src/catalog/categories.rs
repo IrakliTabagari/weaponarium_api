@@ -25,7 +25,7 @@ pub async fn get_categories(
         "SELECT id, name, parent_id FROM categories ORDER BY id LIMIT $1 OFFSET $2",
     )
     .bind(pagination.per_page)
-    .bind(pagination.page * pagination.per_page)
+    .bind((pagination.page - 1) * pagination.per_page)
     .fetch_all(&pool)
     .await
     .map_err(|error| {
