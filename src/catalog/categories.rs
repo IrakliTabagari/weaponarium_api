@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
@@ -11,15 +11,27 @@ pub struct Category {
     parent_id: Option<i32>,
 }
 
-pub async fn get_categories(State(pool): State<PgPool>) -> Result<Json<Vec<Category>>, StatusCode> {
-    let categories =
-        sqlx::query_as::<_, Category>("SELECT id, name, parent_id FROM categories ORDER BY id")
-            .fetch_all(&pool)
-            .await
-            .map_err(|error| {
-                eprintln!("Failed to fetch categories: {error}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+#[derive(Deserialize)]
+pub struct Pagination {
+    page: i32,
+    per_page: i32,
+}
+
+pub async fn get_categories(
+    State(pool): State<PgPool>,
+    pagination: Query<Pagination>,
+) -> Result<Json<Vec<Category>>, StatusCode> {
+    let categories = sqlx::query_as::<_, Category>(
+        "SELECT id, name, parent_id FROM categories ORDER BY id LIMIT $1 OFFSET $2",
+    )
+    .bind(pagination.per_page)
+    .bind(pagination.page * pagination.per_page)
+    .fetch_all(&pool)
+    .await
+    .map_err(|error| {
+        eprintln!("Failed to fetch categories: {error}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(categories))
 }
