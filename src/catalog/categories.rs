@@ -147,3 +147,25 @@ pub async fn update_category(
 
     Ok(StatusCode::OK)
 }
+
+pub async fn get_category(
+    Path(id): Path<i32>,
+    State(pool): State<PgPool>,
+) -> Result<Json<Category>, StatusCode> {
+    let result =
+        sqlx::query_as::<_, Category>("SELECT id, name, parent_id FROM categories WHERE id = $1")
+            .bind(id)
+            .fetch_one(&pool)
+            .await;
+
+    match result {
+        Ok(category) => Ok(Json(category)),
+        Err(error) => match error {
+            sqlx::Error::RowNotFound => Err(StatusCode::NOT_FOUND),
+            _ => {
+                eprintln!("SQLX Error: {error}");
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        },
+    }
+}

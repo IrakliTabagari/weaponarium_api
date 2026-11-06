@@ -1,8 +1,8 @@
-﻿use axum::{routing::get, Json, Router,};
-use anyhow::{Context, Result};
-use std::{env, net::SocketAddr};
+﻿use anyhow::{Context, Result};
 use axum::routing::{post, put};
+use axum::{Json, Router, routing::get};
 use serde::Serialize;
+use std::{env, net::SocketAddr};
 
 mod catalog;
 
@@ -15,8 +15,7 @@ async fn main() -> Result<()> {
         .parse()
         .context("HTTP_ADDR must be an IP address and port")?;
 
-    let database_url = env::var("DATABASE_URL")
-        .context("DATABASE_URL is missing")?;
+    let database_url = env::var("DATABASE_URL").context("DATABASE_URL is missing")?;
 
     let listener = tokio::net::TcpListener::bind(http_addr).await?;
 
@@ -30,9 +29,22 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/api/v1/categories", get(catalog::categories::get_categories))
-        .route("/api/v1/categories", post(catalog::categories::create_category))
-        .route("/api/v1/categories/{id}", put(catalog::categories::update_category))
+        .route(
+            "/api/v1/categories",
+            get(catalog::categories::get_categories),
+        )
+        .route(
+            "/api/v1/categories",
+            post(catalog::categories::create_category),
+        )
+        .route(
+            "/api/v1/categories/{id}",
+            get(catalog::categories::get_category),
+        )
+        .route(
+            "/api/v1/categories/{id}",
+            put(catalog::categories::update_category),
+        )
         .route("/api/v1/weapons", get(catalog::weapons::get_weapons))
         .route("/api/v1/weapons", post(catalog::weapons::create_weapon))
         .with_state(pool);
@@ -49,6 +61,3 @@ struct HealthResponse {
 async fn health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "OK" })
 }
-
-
-
