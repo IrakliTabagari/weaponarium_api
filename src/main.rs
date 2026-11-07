@@ -29,24 +29,8 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/health", get(health))
-        .route(
-            "/api/v1/categories",
-            get(catalog::categories::get_categories),
-        )
-        .route(
-            "/api/v1/categories",
-            post(catalog::categories::create_category),
-        )
-        .route(
-            "/api/v1/categories/{id}",
-            get(catalog::categories::get_category),
-        )
-        .route(
-            "/api/v1/categories/{id}",
-            put(catalog::categories::update_category),
-        )
-        .route("/api/v1/weapons", get(catalog::weapons::get_weapons))
-        .route("/api/v1/weapons", post(catalog::weapons::create_weapon))
+        .nest("/api/v1/categories", catalog::categories::category_routes())
+        .nest("/api/v1/weapons", catalog::weapons::weapon_routes())
         .with_state(pool);
 
     axum::serve(listener, app).await.unwrap();

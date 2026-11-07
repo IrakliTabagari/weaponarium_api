@@ -1,8 +1,9 @@
-use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::routing::{get, post, put};
+use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, Pool, Postgres};
 
 #[derive(Serialize, FromRow)]
 pub struct Category {
@@ -168,4 +169,12 @@ pub async fn get_category(
             }
         },
     }
+}
+
+pub fn category_routes() -> Router<Pool<Postgres>> {
+    Router::new()
+        .route("/", get(get_categories))
+        .route("/", post(create_category))
+        .route("/{id}", get(get_category))
+        .route("/{id}", put(update_category))
 }

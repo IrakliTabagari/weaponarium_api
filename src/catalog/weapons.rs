@@ -1,28 +1,27 @@
-﻿use axum::extract::State;
+﻿use axum::Router;
+use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
+use axum::routing::post;
+use axum::{Json, routing::get};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::{FromRow, PgPool, Pool, Postgres};
 
 #[derive(Serialize, FromRow)]
 pub struct Weapon {
     id: i32,
     name: String,
-    category_id: i32
+    category_id: i32,
 }
 
-pub async fn get_weapons(
-    State(pool): State<PgPool>,
-) -> Result<Json<Vec<Weapon>>, StatusCode> {
-    let weapons = sqlx::query_as::<_, Weapon>(
-        "SELECT id, name, category_id FROM weapons ORDER BY id",
-    )
-        .fetch_all(&pool)
-        .await
-        .map_err(|error| {
-            eprintln!("Failed to fetch categories: {error}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+pub async fn get_weapons(State(pool): State<PgPool>) -> Result<Json<Vec<Weapon>>, StatusCode> {
+    let weapons =
+        sqlx::query_as::<_, Weapon>("SELECT id, name, category_id FROM weapons ORDER BY id")
+            .fetch_all(&pool)
+            .await
+            .map_err(|error| {
+                eprintln!("Failed to fetch categories: {error}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     Ok(Json(weapons))
 }
@@ -30,16 +29,14 @@ pub async fn get_weapons(
 #[derive(Deserialize)]
 pub struct CreateWeaponRequest {
     name: String,
-    category_id: i32
+    category_id: i32,
 }
 
 pub async fn create_weapon(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateWeaponRequest>,
 ) -> Result<Json<Weapon>, StatusCode> {
-    let category_id: Option<i32> = sqlx::query_scalar(
-        "SELECT id FROM categories WHERE id = $1"
-    )
+    let category_id: Option<i32> = sqlx::query_scalar("SELECT id FROM categories WHERE id = $1")
         .bind(payload.category_id)
         .fetch_optional(&pool)
         .await
@@ -50,27 +47,30 @@ pub async fn create_weapon(
 
     if category_id.is_none() {
         eprintln!("invalid category_id");
-        return Err(
-            StatusCode::BAD_REQUEST
-        );
+        return Err(StatusCode::BAD_REQUEST);
     }
-
 
     let weapon_id: i32 = sqlx::query_scalar!(
         "INSERT INTO weapons (name, category_id) VALUES ($1, $2) RETURNING id",
         payload.name,
         payload.category_id as i64
     )
-        .fetch_one(&pool)
-        .await
-        .map_err(|error| {
-            eprintln!("Failed to insert new weapon: {error}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    .fetch_one(&pool)
+    .await
+    .map_err(|error| {
+        eprintln!("Failed to insert new weapon: {error}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(Weapon {
         id: weapon_id,
         name: payload.name,
-        category_id: payload.category_id
+        category_id: payload.category_id,
     }))
+}
+
+pub fn weapon_routes() -> Router<Pool<Postgres>> {
+    Router::new()
+        .route("/", get(get_weapons))
+        .route("/", post(create_weapon))
 }
