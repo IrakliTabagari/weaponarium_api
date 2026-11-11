@@ -177,11 +177,23 @@ pub async fn get_category(
     Path(id): Path<i32>,
     State(pool): State<PgPool>,
 ) -> Result<Json<Category>, StatusCode> {
-    let result =
-        sqlx::query_as::<_, Category>("SELECT id, name, parent_id FROM categories WHERE id = $1")
-            .bind(id)
-            .fetch_one(&pool)
-            .await;
+    let result = sqlx::query_as::<_, Category>(
+        r#"
+                SELECT
+                    c.id,
+                    c.name,
+                    c.parent_id,
+                    p.id        AS p_id,
+                    p.name      AS p_name,
+                    p.parent_id AS p_parent_id
+                FROM categories c
+                LEFT JOIN categories p ON p.id = c.parent_id
+                WHERE c.id = $1
+                "#,
+    )
+    .bind(id)
+    .fetch_one(&pool)
+    .await;
 
     match result {
         Ok(category) => Ok(Json(category)),
