@@ -3,13 +3,36 @@ use axum::http::StatusCode;
 use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool, Pool, Postgres};
+use sqlx::postgres::PgRow;
+use sqlx::{FromRow, PgPool, Pool, Postgres, Row};
 
-#[derive(Serialize, FromRow)]
+#[derive(Serialize)]
 pub struct Category {
     id: i32,
     name: String,
     parent_id: Option<i32>,
+    parent_category: Option<Box<Category>>,
+}
+
+impl<'r> FromRow<'r, PgRow> for Category {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        let parent_category = match row.try_get::<Option<i32>, _>("p_id")? {
+            Some(id) => Some(Box::new(Category {
+                id,
+                name: row.try_get("p_name")?,
+                parent_id: row.try_get("p_parent_id")?,
+                parent_category: None, // Only load the immediate parent.
+            })),
+            None => None,
+        };
+
+        Ok(Category {
+            id: row.try_get("id")?,
+            name: row.try_get("name")?,
+            parent_id: row.try_get("parent_id")?,
+            parent_category,
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -63,6 +86,7 @@ pub async fn create_category(
         id: category_id,
         name: payload.name,
         parent_id: payload.parent_id,
+        parent_category: None,
     };
 
     Ok(Json(category))
